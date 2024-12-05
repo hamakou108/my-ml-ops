@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  mlflow:
+    build: $PWD/docker/mlflow
+    ports:
+      - 8080:8080
+    volumes:
+      - ./mlflow:/opt/mlflow/mlflow
+    environment:
+      MLFLOW_HOST: 0.0.0.0
+      MLFLOW_PORT: 8080
+      MLFLOW_BACKEND_STORE_URI: postgresql://mlflow:mlflow@postgres:5432/mlflow
+      MLFLOW_ARTIFACTS_DESTINATION: s3://mlflow
+      MLFLOW_S3_ENDPOINT_URL: http://localstack:4566
+      AWS_ACCESS_KEY_ID: my_access_key_id
+      AWS_SECRET_ACCESS_KEY: my_secret_access_key
+    depends_on:
+      - postgres
+      - localstack
+    command: mlflow server
+
+  postgres:
+    image: postgres:16.2
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: mlflow
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow
+    volumes:
+      - $PWD/postgres:/var/lib/postgresql/data
+    restart: always
+
+  localstack:
+    image: localstack/localstack:3.2
+    # build: $PWD/docker/localstack
+    ports:
+      - 4566:4566
+    environment:
+      DEBUG: 1
+      SERVICES: s3
+      PERSISTENCE: 1
+      AWS_ACCESS_KEY_ID: my_access_key_id
+      AWS_SECRET_ACCESS_KEY: my_secret_access_key
+    command: echo "Hello" && ls -la /tmp
+    volumes:
+    #   - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
